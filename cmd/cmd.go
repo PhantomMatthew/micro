@@ -61,10 +61,6 @@ func setup(app *ccli.App) {
 			Usage: "Enable local only development: Defaults to true.",
 		},
 		&ccli.BoolFlag{
-			Name:  "peer",
-			Usage: "Peer with the global network to share services",
-		},
-		&ccli.BoolFlag{
 			Name:    "enable_acme",
 			Usage:   "Enables ACME support via Let's Encrypt. ACME hosts should also be specified.",
 			EnvVars: []string{"MICRO_ENABLE_ACME"},
@@ -211,7 +207,7 @@ func setup(app *ccli.App) {
 			web.Address = ctx.String("web_address")
 		}
 		if len(ctx.String("network_address")) > 0 {
-			server.Network = ctx.String("network_address")
+			network.Address = ctx.String("network_address")
 		}
 		if len(ctx.String("router_address")) > 0 {
 			router.Address = ctx.String("router_address")
@@ -307,7 +303,7 @@ func Setup(app *ccli.App, options ...micro.Option) {
 	})
 
 	// boot micro runtime
-	app.Action = platform.Run
+	app.Action = func(c *ccli.Context) error { return ccli.ShowAppHelp(c) }
 
 	setup(app)
 }

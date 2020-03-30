@@ -61,7 +61,7 @@ var (
 	          <li><a href="/client">Client</a></li>
 	          <li><a href="/services">Services</a></li>
 	          {{if .StatsURL}}<li><a href="{{.StatsURL}}" class="navbar-link">Stats</a></li>{{end}}
-	          {{if .LoginURL}}<li><a href="{{.LoginURL}}" class="navbar-link">Login</a></li>{{end}}
+	          {{if .LoginURL}}<li><a href="{{.LoginURL}}" class="navbar-link">{{.LoginTitle}}</a></li>{{end}}
 	        </ul>
               </div>
 	    </div>
@@ -228,19 +228,19 @@ jQuery(function($, undefined) {
 					</select>
 				</ul>
 			</div>
-			<div class="form-group">
+			<div class="form-group other" style="display: none;">
 				<label for="otherendpoint">Other Endpoint</label>
 				<ul class="list-group">
-					<input class="form-control" type=text name=otherendpoint id=otherendpoint disabled placeholder="Endpoint"/>
+					<input class="form-control" type=text name=otherendpoint id=otherendpoint placeholder="Endpoint"/>
 				</ul>
 			</div>
 			<div class="form-group">
-				<label for="auth-token">Auth Token</label>
+			</div>
+			<div class="form-group">
+				<label for="metadata">Metadata</label>
 				<ul class="list-group">
-					<input class="form-control" type=text name=auth-token id=auth-token placeholder="Auth Token"/>
+					<input class="form-control" type=text name=metadata id=metadata placeholder="Metadata" value="{}"/>
 				</ul>
-			</div>
-			<div class="form-group">
 				<label for="request">Request</label>
 				<textarea class="form-control" name=request id=request rows=8>{}</textarea>
 			</div>
@@ -277,8 +277,6 @@ jQuery(function($, undefined) {
 			//Function executes on change of first select option field 
 			$("#service").change(function(){
 				var select = $("#service option:selected").val();
-				$("#otherendpoint").attr("disabled", true);
-				$('#otherendpoint').val('');
 				$("#endpoint").empty();
 				$("#endpoint").append("<option disabled selected> -- select an endpoint -- </option>");
 				var s_map = {};
@@ -290,20 +288,23 @@ jQuery(function($, undefined) {
 				s_map[{{$service}}] = m_list
 				{{ end }}
 				if (select in s_map) {
-				var serviceEndpoints = s_map[select]
-				var len = serviceEndpoints.length;
+					var serviceEndpoints = s_map[select]
+					var len = serviceEndpoints.length;
 					for(var i = 0; i < len; i++) {
 						$("#endpoint").append("<option value=\""+serviceEndpoints[i]+"\">"+serviceEndpoints[i]+"</option>");	
 					}
 				}
 				$("#endpoint").append("<option value=\"other\"> - Other</option>");
 			});
+
 			//Function executes on change of second select option field 
 			$("#endpoint").change(function(){
 				var select = $("#endpoint option:selected").val();
 				if (select == "other") {
+					$(".other").css('display', 'block');
 					$("#otherendpoint").attr("disabled", false);
 				} else {
+					$(".other").css('display', 'none');
 					$("#otherendpoint").attr("disabled", true);
 					$('#otherendpoint').val('');
 				}
@@ -335,9 +336,17 @@ jQuery(function($, undefined) {
 			}
 
 			var reqBody;
+			var headers;
 
 			try {
-				reqBody = JSON.parse(document.forms[0].elements["request"].value);
+				var md = document.forms[0].elements["metadata"].value;
+				var rq = document.forms[0].elements["request"].value
+				if (md.length > 0) {
+					headers = JSON.parse(md);
+				}
+				if (rq.length > 0) {
+					reqBody = JSON.parse(rq);
+				};
 			} catch(e) {
 				document.getElementById("response").innerText = "Invalid request: " + e.message;
 				return false;
@@ -349,11 +358,12 @@ jQuery(function($, undefined) {
 				"request": reqBody
 			}
 			req.open("POST", "/rpc", true);
-			req.setRequestHeader("Content-type","application/json");				
+			req.setRequestHeader("Content-type","application/json");
 
-			var authToken = document.forms[0].elements["auth-token"].value;
-			if(authToken.length > 0) {
-				req.setRequestHeader("Authorization","Bearer " + authToken);
+			if (headers != undefined) {
+				for (let [key, value] of Object.entries(headers)) {
+					req.setRequestHeader(key, value);
+				}
 			}
 
 			req.send(JSON.stringify(request));
@@ -399,13 +409,34 @@ jQuery(function($, undefined) {
 .table>tbody>tr>th, .table>tbody>tr>td {
     border-top: none;
 }
+.endpoint {
+  cursor: pointer;
+}
+.bold {
+  font-weight: bold;
+}
 pre {border: 0; padding: 20px;}
+{{end}}
+{{define "script"}}
+<script type="text/javascript">
+  $('.endpoint').on('click', function() {
+	var val = $(this).parent().find("table");
+	var state = $(this).find(".state");
+	if (val.css('display') == 'none') {
+	  state.text("[-]");
+	  val.css('display', 'table');
+	} else {
+	  val.css('display', 'none');
+	  state.text("[+]");
+	}
+  });
+</script>
 {{end}}
 {{define "content"}}
 	<hr>
-	<h4>Nodes</h4>
+	<h4 class="bold">Nodes</h4>
 	{{range .Results}}
-	<h5>Version {{.Version}}</h5>
+	<h5>Version: {{.Version}}</h5>
 	<table class="table">
 		<thead>
 			<th>Id</th>
@@ -425,12 +456,13 @@ pre {border: 0; padding: 20px;}
 	{{end}}
 	{{with $svc := index .Results 0}}
 	{{if $svc.Endpoints}}
-	<h4>Endpoints</h4>
+	<h4 class="bold">Endpoints</h4>
 	<hr/>
 	{{end}}
 	{{range $svc.Endpoints}}
-		<h4>{{.Name}}</h4>
-		<table class="table">
+	<div>
+		<h4 class="endpoint"><span class="state">[+]</span> {{.Name}}</h4>
+		<table class="table" style="display: none;">
 			<tbody>
 				{{if .Metadata}}
 				<tr>
@@ -448,6 +480,7 @@ pre {border: 0; padding: 20px;}
 				</tr>
 			</tbody>
 		</table>
+	</div>
 	{{end}}
 	{{end}}
 {{end}}
