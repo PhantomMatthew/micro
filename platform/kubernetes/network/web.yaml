@@ -30,7 +30,7 @@ spec:
         - name: MICRO_AUTH
           value: "service"
         - name: MICRO_AUTH_LOGIN_URL
-          value: "/account"
+          value: "https://account.micro.mu"
         - name: MICRO_AUTH_PUBLIC_KEY
           valueFrom:
             secretKeyRef:
@@ -51,7 +51,7 @@ spec:
         - name: MICRO_ACME_PROVIDER
           value: certmagic
         - name: MICRO_ACME_HOSTS
-          value: '*.micro.mu,*.cloud.micro.mu,micro.mu'
+          value: '*.m3o.app,*.micro.mu,*.cloud.micro.mu,micro.mu'
         - name: CF_API_TOKEN
           valueFrom:
             secretKeyRef:
